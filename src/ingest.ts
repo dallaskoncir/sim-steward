@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { ChromaClient, ChromaNotFoundError } from "chromadb";
 import { Ollama } from "ollama";
+import { chunkByHeading } from "./chunk.ts";
 
 const EMBED_MODEL = "nomic-embed-text";
 const COLLECTION_NAME = "rulebook";
@@ -10,19 +11,12 @@ const RULEBOOK_PATH = new URL("../data/rulebook.md", import.meta.url);
 // environment on its own — it defaults to 127.0.0.1, which breaks under WSL2
 // where Ollama runs on the Windows host reachable via a gateway IP.
 const ollama = new Ollama({ host: process.env.OLLAMA_HOST });
-// Local Chroma server, e.g. `chroma run --path ./chroma-data`
-const chroma = new ChromaClient({ host: "localhost", port: 8000 });
-
-// Chunk by "## " heading so each penalty rule stays a single, semantically
-// complete unit — splitting mid-rule would let the retriever return half a
-// penalty without its trigger condition or vice versa. The text before the
-// first "## " (the top-level "# ..." title) isn't a rule, so it's dropped.
-function chunkByHeading(markdown: string): string[] {
-  return markdown
-    .split(/\n(?=## )/)
-    .map((chunk) => chunk.trim())
-    .filter((chunk) => chunk.startsWith("## "));
-}
+// Local Chroma server, e.g. `chroma run --path ./chroma-data`. Overridable
+// the same way as OLLAMA_HOST above, since Chroma can run outside WSL2 too.
+const chroma = new ChromaClient({
+  host: process.env.CHROMA_HOST ?? "localhost",
+  port: process.env.CHROMA_PORT ? Number(process.env.CHROMA_PORT) : 8000,
+});
 
 async function main() {
   const markdown = await readFile(RULEBOOK_PATH, "utf-8");

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "ingest": "tsx src/ingest.ts"
+    "ingest": "tsx src/ingest.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "repository": {
     "type": "git",
