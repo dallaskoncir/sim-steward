@@ -15,12 +15,13 @@ const chroma = new ChromaClient({ host: "localhost", port: 8000 });
 
 // Chunk by "## " heading so each penalty rule stays a single, semantically
 // complete unit — splitting mid-rule would let the retriever return half a
-// penalty without its trigger condition or vice versa.
+// penalty without its trigger condition or vice versa. The text before the
+// first "## " (the top-level "# ..." title) isn't a rule, so it's dropped.
 function chunkByHeading(markdown: string): string[] {
   return markdown
     .split(/\n(?=## )/)
     .map((chunk) => chunk.trim())
-    .filter(Boolean);
+    .filter((chunk) => chunk.startsWith("## "));
 }
 
 async function main() {
