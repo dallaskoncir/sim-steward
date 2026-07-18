@@ -1,0 +1,9 @@
+node_modules/
+dist/
+
+# Local Chroma server data (chroma run --path ./chroma-data)
+chroma-data/
+
+.env
+*.log
+.DS_Store

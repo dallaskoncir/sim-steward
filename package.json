@@ -1,0 +1,30 @@
+{
+  "name": "sim-steward",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "ingest": "tsx src/ingest.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dallaskoncir/sim-steward.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/dallaskoncir/sim-steward/issues"
+  },
+  "homepage": "https://github.com/dallaskoncir/sim-steward#readme",
+  "dependencies": {
+    "chromadb": "^3.5.0",
+    "ollama": "^0.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}
