@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { ChromaClient } from "chromadb";
+import { ChromaClient, ChromaNotFoundError } from "chromadb";
 import { Ollama } from "ollama";
 
 const EMBED_MODEL = "nomic-embed-text";
@@ -32,6 +32,16 @@ async function main() {
     model: EMBED_MODEL,
     input: chunks,
   });
+
+  // rule-${i} IDs are positional: if a rule is reordered or removed between
+  // runs, add()/upsert() by ID would leave stale or misassigned vectors
+  // behind. The rulebook is small and static, so the simplest correct fix
+  // is a full rebuild on every ingest rather than tracking per-rule identity.
+  try {
+    await chroma.deleteCollection({ name: COLLECTION_NAME });
+  } catch (err) {
+    if (!(err instanceof ChromaNotFoundError)) throw err;
+  }
 
   // We pass embeddings we generated ourselves, so no embeddingFunction is
   // needed on the collection — Chroma just stores and indexes the vectors.
