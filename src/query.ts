@@ -1,6 +1,6 @@
 import { ChromaClient, ChromaNotFoundError } from "chromadb";
 import { Ollama } from "ollama";
-import { assertIncidentLength } from "./validate.ts";
+import { assertIncidentLength, assertSectionFormat } from "./validate.ts";
 import { parseQueryArgs } from "./parse-args.ts";
 
 interface RuleMetadata {
@@ -50,6 +50,7 @@ async function main() {
   }
   try {
     assertIncidentLength(incident, MAX_INCIDENT_LENGTH);
+    if (section) assertSectionFormat(section);
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     process.exit(1);

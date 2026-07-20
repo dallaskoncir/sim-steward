@@ -49,3 +49,34 @@ test("ignores list items that don't match the numbered rule pattern", () => {
   assert.equal(rules.length, 1);
   assert.equal(rules[0]!.id, "1.1");
 });
+
+test("keeps a colon inside the title intact instead of splitting on it", () => {
+  const markdown = [
+    "## 4.0 Conduct",
+    "- **4.4 Blue Flags: Right of Way:** Failing to yield to a lapping car. Penalty: 5s.",
+  ].join("\n");
+
+  const rules = parseRulebook(markdown);
+  assert.equal(rules.length, 1);
+  assert.equal(rules[0]!.title, "Blue Flags: Right of Way");
+  assert.equal(rules[0]!.text, "Failing to yield to a lapping car. Penalty: 5s.");
+});
+
+test("resets the current section on a non-numbered heading, instead of leaking it forward", () => {
+  const markdown = [
+    "## 1.0 Overtaking and Defending",
+    "- **1.1 The Vortex of Danger:** Some rule text. Penalty: 10s.",
+    "",
+    "## Notes",
+    "- **9.9 Not A Real Rule:** This should not inherit section 1.0.",
+    "",
+    "## 2.0 Track Limits and Rejoining",
+    "- **2.1 Unsafe Rejoin:** Yet more rule text. Penalty: 20s.",
+  ].join("\n");
+
+  const rules = parseRulebook(markdown);
+  assert.deepEqual(
+    rules.map((r) => r.id),
+    ["1.1", "2.1"],
+  );
+});
