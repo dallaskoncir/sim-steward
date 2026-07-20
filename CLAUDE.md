@@ -21,9 +21,9 @@ Like Flowlaps, adhere to a strict branch-per-step PR workflow:
 
 ## Agent Skills Policy
 Use agent skills library selectively, keeping the context window focused:
-- **Planning/Setup Branches**: `architecture-design`, `project-planning`.
-- **Implementation Branches**: `source-driven-development`, `incremental-implementation`.
-- **PR/Review Branches**: `code-review-and-quality`, `git-workflow-and-versioning`.
+- **Match the Skill to the Task**: Pick whichever installed skill best fits the work at hand rather than following a fixed branch-to-skill mapping.
+- **Default to Installed Skills**: Before attempting to write custom scripts, scaffolding logic, or complex manual CLI commands, you MUST check for and utilize the installed skills from the Addy Osmani skill library.
+- **Do Not Reinvent the Wheel**: If a task (like analyzing a repo, scaffolding a component, or managing git operations) can be accomplished using an existing installed skill, you are strictly required to invoke that skill rather than doing the work from scratch.
 
 ## Code Review Workflow
 - **Strict Role Separation**: You act as my co-author (Claude) for writing code, committing, and opening PRs. However, the GitHub account `flowlaps-ai-reviewer` is strictly used as an independent reviewer.
