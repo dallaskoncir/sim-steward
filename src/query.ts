@@ -4,6 +4,10 @@ import { Ollama } from "ollama";
 const EMBED_MODEL = "nomic-embed-text";
 const COLLECTION_NAME = "rulebook";
 const TOP_K = 3;
+// No real risk locally (OLLAMA_HOST is always our own machine), but caps
+// the embed call's input size in case OLLAMA_HOST is ever pointed at a
+// shared/remote endpoint.
+const MAX_INCIDENT_LENGTH = 2000;
 
 const ollama = new Ollama({ host: process.env.OLLAMA_HOST });
 const chroma = new ChromaClient({
@@ -25,6 +29,10 @@ async function main() {
   const incident = process.argv.slice(2).join(" ").trim();
   if (!incident) {
     console.error('Usage: npm run query -- "description of the incident"');
+    process.exit(1);
+  }
+  if (incident.length > MAX_INCIDENT_LENGTH) {
+    console.error(`Incident description too long (${incident.length} chars, max ${MAX_INCIDENT_LENGTH}).`);
     process.exit(1);
   }
 
@@ -54,6 +62,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 });
