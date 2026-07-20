@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { ChromaClient, ChromaNotFoundError } from "chromadb";
 import { Ollama } from "ollama";
-import { chunkByHeading } from "./chunk.ts";
+import { parseRulebook } from "./parse-rulebook.ts";
 
 const EMBED_MODEL = "nomic-embed-text";
 const COLLECTION_NAME = "rulebook";
@@ -20,17 +20,23 @@ const chroma = new ChromaClient({
 
 async function main() {
   const markdown = await readFile(RULEBOOK_PATH, "utf-8");
-  const chunks = chunkByHeading(markdown);
+  const rules = parseRulebook(markdown);
 
+  // Embed title + body, not the bare rule text: titles like "Unsafe Rejoin"
+  // or "Corner Cutting" carry semantic signal that closely matches how a
+  // steward would phrase an incident, so leaving them out would weaken
+  // retrieval. IDs/section numbers are left out since they're arbitrary
+  // numbers with no embedding-relevant meaning.
   const { embeddings } = await ollama.embed({
     model: EMBED_MODEL,
-    input: chunks,
+    input: rules.map((rule) => `${rule.title}. ${rule.text}`),
   });
 
-  // rule-${i} IDs are positional: if a rule is reordered or removed between
-  // runs, add()/upsert() by ID would leave stale or misassigned vectors
-  // behind. The rulebook is small and static, so the simplest correct fix
-  // is a full rebuild on every ingest rather than tracking per-rule identity.
+  // rule.id (e.g. "1.1") is derived from the rulebook's own numbering, not
+  // array position, so re-ingesting after a rule is reordered or removed
+  // can't silently overwrite the wrong rule's vector. We still rebuild the
+  // whole collection on every run (rather than upsert) so a rule removed
+  // from the rulebook doesn't leave an orphaned vector behind.
   try {
     await chroma.deleteCollection({ name: COLLECTION_NAME });
   } catch (err) {
@@ -52,12 +58,17 @@ async function main() {
   });
 
   await collection.add({
-    ids: chunks.map((_, i) => `rule-${i}`),
+    ids: rules.map((rule) => rule.id),
     embeddings,
-    documents: chunks,
+    documents: rules.map((rule) => rule.text),
+    metadatas: rules.map((rule) => ({
+      title: rule.title,
+      section: rule.section,
+      sectionNumber: rule.sectionNumber,
+    })),
   });
 
-  console.log(`Ingested ${chunks.length} chunks into "${COLLECTION_NAME}".`);
+  console.log(`Ingested ${rules.length} rules into "${COLLECTION_NAME}".`);
 }
 
 main().catch((err) => {
