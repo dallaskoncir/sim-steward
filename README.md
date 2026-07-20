@@ -129,3 +129,12 @@ larger agentic tooling.
 This project follows a strict branch-per-step workflow — see `CLAUDE.md` for
 details. In short: one branch per discrete step, a PR per branch (using
 `pull_request_template.md`), reviewed before merge.
+
+This repo's `.mcp.json` configures the [chrome-devtools MCP
+server](https://github.com/ChromeDevTools/chrome-devtools-mcp) for agents
+(e.g. Claude Code) doing UI work. It requires a locally installed Chrome —
+it does not download one itself:
+```
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb
+```
