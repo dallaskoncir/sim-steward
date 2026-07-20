@@ -16,6 +16,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "bugs": {
     "url": "https://github.com/dallaskoncir/sim-steward/issues"
   },
