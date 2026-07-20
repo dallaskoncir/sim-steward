@@ -1,5 +1,6 @@
 import { ChromaClient, ChromaNotFoundError } from "chromadb";
 import { Ollama } from "ollama";
+import { assertIncidentLength } from "./validate.ts";
 
 const EMBED_MODEL = "nomic-embed-text";
 const COLLECTION_NAME = "rulebook";
@@ -31,8 +32,10 @@ async function main() {
     console.error('Usage: npm run query -- "description of the incident"');
     process.exit(1);
   }
-  if (incident.length > MAX_INCIDENT_LENGTH) {
-    console.error(`Incident description too long (${incident.length} chars, max ${MAX_INCIDENT_LENGTH}).`);
+  try {
+    assertIncidentLength(incident, MAX_INCIDENT_LENGTH);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   }
 
