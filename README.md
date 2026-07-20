@@ -11,7 +11,7 @@ query it from the command line.
 ## Quick Start
 
 ### Prerequisites
-- Node.js 24+
+- Node.js 20+ (required by the `chromadb` client)
 - [Ollama](https://ollama.com/) running locally, with the embedding model pulled:
   ```
   ollama pull nomic-embed-text
