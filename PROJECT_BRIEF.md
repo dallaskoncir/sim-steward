@@ -37,3 +37,24 @@ A vector search returning text is not an agent. The tool must explain its ruling
 - **The Upgrade:** Hook the output of Phase 3 into a local chat model via Ollama (e.g., `llama3.2` or `qwen2.5`). 
 - **The Execution:** Format the system prompt to include the Top 2 retrieved rules alongside their IDs. Instruct the model: *"You are a Sim Racing Steward. Explain the ruling based ONLY on the provided rules. You must cite your source using the exact Rule ID (e.g., [Rule 1.1])."*
 - **The Goal:** The final CLI output should look like a human steward's penalty assessment, complete with inline citations, preventing LLM hallucinations.
+
+## Expansion Phases: Web Interface (Next.js)
+Once the local RAG mechanics are proven in the CLI, the project will transition into a modern web application to demonstrate production-ready UI/UX for AI agents.
+
+### Phase 5: Next.js Foundation & UI Shell
+Transition the architecture from a raw Node.js CLI to a Next.js App Router environment.
+- **The Upgrade:** Initialize Next.js, Tailwind, and install the Vercel AI SDK (`ai`, `@ai-sdk/react`).
+- **The Execution:** Build a client-side chat shell (`app/page.tsx`) using the `useChat` hook and basic UI primitives (e.g., `shadcn/ui`). Create a mock API route (`app/api/chat/route.ts`) that streams a static text response.
+- **The Goal:** Verify the Vercel AI SDK streaming architecture and frontend state management are functioning correctly before introducing the vector database to the Next.js backend.
+
+### Phase 6: Backend RAG Integration
+Wire the existing Chroma RAG pipeline into the Next.js API route.
+- **The Upgrade:** Integrate the Chroma client and Ollama generation model (via `ollama-ai-provider`) into the Next.js server runtime.
+- **The Execution:** When the `/api/chat` route receives a user message, execute the retrieval pipeline: embed the query (`nomic-embed-text`), fetch the top rules from Chroma, format the system prompt with the context, and pass it to the Vercel AI SDK's `streamText` function.
+- **The Goal:** Connect the web frontend to the local knowledge base, replacing the mock stream with a live, RAG-backed, streaming LLM response.
+
+### Phase 7: Chat Polish & Markdown Citations
+Elevate the user experience to match standard AI product expectations.
+- **The Upgrade:** Implement robust markdown rendering in the chat interface.
+- **The Execution:** Parse the streaming text on the client to cleanly render the retrieved rules and citations (e.g., transforming `[Rule 1.1]` into styled badges or tooltips). Add loading skeletons, error handling, and automatic scroll-to-bottom behaviors.
+- **The Goal:** Deliver a polished, portfolio-ready web application that proves full-stack proficiency in building grounded, agentic user interfaces.
