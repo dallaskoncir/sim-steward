@@ -10,7 +10,10 @@ them — along with their section metadata — in a local
 [Chroma](https://www.trychroma.com/) vector database. Querying is two-stage:
 Chroma's dense embedding search narrows the rulebook down to a candidate set,
 then a local cross-encoder ([transformers.js](https://huggingface.co/docs/transformers.js))
-re-scores those candidates against the incident text for the final ranking.
+re-scores those candidates against the incident text. The two rankings are
+combined via Reciprocal Rank Fusion rather than trusting the cross-encoder
+alone — see [ADR-003](docs/decisions/0003-rrf-fuse-retrieval-rankings.md)
+for why.
 
 ## Quick Start
 
@@ -38,8 +41,10 @@ one, and (re)builds the `rulebook` collection in Chroma from scratch.
 npm run query -- "divebomb into turn 1 that put another car in the wall"
 ```
 Pulls the top 10 candidates from Chroma, re-ranks them with a local
-cross-encoder, and returns the top 2 with their relevance score. The first
-query run downloads and caches the cross-encoder model (~88MB, under
+cross-encoder, fuses that ranking with Chroma's original one, and returns
+the top 2 with the cross-encoder's score shown for reference (it no longer
+solely determines the order — see ADR-003). The first query run downloads
+and caches the cross-encoder model (~88MB, under
 `node_modules/@huggingface/transformers/.cache/` — wiped and re-downloaded
 on a fresh `npm install`).
 
@@ -86,13 +91,18 @@ under WSL2, where Ollama on the Windows host isn't reachable at `127.0.0.1`:
   silently overwrite the wrong rule's vector.
 - `src/query.ts` — embeds a CLI-supplied incident description, optionally
   pre-filters by section metadata, pulls the top 10 nearest rules from
-  Chroma, and re-ranks them with a cross-encoder before showing the top 2.
+  Chroma, re-ranks them with a cross-encoder, fuses both rankings, and
+  shows the top 2.
 - `src/rerank-scores.ts` — pure scoring/sorting logic for the re-rank step
   (unit tested without loading the model).
 - `src/rerank.ts` — loads the local cross-encoder
   ([`Xenova/ms-marco-MiniLM-L-6-v2`](https://huggingface.co/Xenova/ms-marco-MiniLM-L-6-v2)
   via `@huggingface/transformers`) and scores the incident against each
   Chroma candidate.
+- `src/fuse-rankings.ts` — combines Chroma's and the cross-encoder's
+  rankings via Reciprocal Rank Fusion, so a rule the cross-encoder demotes
+  still has to overcome Chroma's agreement to lose the top spot (see
+  ADR-003).
 - `data/rulebook.md` — sample sporting code used as the source of truth.
 
 This is a scoped, weekend-sized POC (see `PROJECT_BRIEF.md`) meant to prove

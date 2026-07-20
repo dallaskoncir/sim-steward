@@ -4,6 +4,7 @@ import { assertIncidentLength, assertSectionFormat } from "./validate.ts";
 import { parseQueryArgs } from "./parse-args.ts";
 import { rerank } from "./rerank.ts";
 import type { RerankCandidate } from "./rerank-scores.ts";
+import { fuseRankings } from "./fuse-rankings.ts";
 
 interface RuleMetadata {
   title: string;
@@ -15,8 +16,13 @@ interface RuleMetadata {
 const EMBED_MODEL = "nomic-embed-text";
 const COLLECTION_NAME = "rulebook";
 // Two-stage retrieval: pull a wider candidate set from Chroma's fast dense
-// embedding search (stage 1), then let the slower, more accurate
-// cross-encoder (stage 2) narrow it down to the results we actually show.
+// embedding search (stage 1), then re-score with a slower, more accurate
+// cross-encoder (stage 2). The two rankings are fused via Reciprocal Rank
+// Fusion rather than trusting stage 2 alone — Xenova/ms-marco-MiniLM-L-6-v2
+// is a general web-passage reranker, not tuned for short, jargon-heavy
+// regulatory text, and was observed to confidently demote a rule stage 1
+// already ranked correctly (e.g. surfacing "Pit Speeding" for a query about
+// an unsafe overtake, purely on the word "fast"). See fuse-rankings.ts.
 const INITIAL_K = 10;
 const FINAL_K = 2;
 // No real risk locally (OLLAMA_HOST is always our own machine), but caps
@@ -37,10 +43,9 @@ interface DisplayResult {
   metadata: RuleMetadata | null;
 }
 
-// Shows the cross-encoder's relevance score, not Chroma's vector distance —
-// the reranked order (and thus the Top FINAL_K cut) is determined by the
-// former, so labeling results with the latter would misrepresent why they
-// were chosen.
+// Final order comes from fusing stage-1 and stage-2 rankings (see
+// fuseRankings below), not from the cross-encoder score alone — so it's
+// shown labeled as its own signal, not as "the" relevance score.
 function formatResults(results: DisplayResult[]): string {
   if (results.length === 0) return "No matching rules found.";
 
@@ -48,7 +53,7 @@ function formatResults(results: DisplayResult[]): string {
     .map((result, i) => {
       const meta = result.metadata;
       const header = meta ? `[${result.id}] ${meta.title}  (${meta.section})` : `[${result.id}]`;
-      return `${i + 1}. ${header}  [relevance: ${result.score.toFixed(4)}]\n${result.text}`;
+      return `${i + 1}. ${header}  [cross-encoder score: ${result.score.toFixed(4)}]\n${result.text}`;
     })
     .join("\n\n");
 }
@@ -93,12 +98,32 @@ async function main() {
   const documents = results.documents[0]!;
   const metadatas = results.metadatas[0]!;
   const metadataById = new Map(ids.map((id, i) => [id, metadatas[i] ?? null]));
+  const documentById = new Map(ids.map((id, i) => [id, documents[i] ?? ""]));
 
-  const candidates: RerankCandidate[] = ids.map((id, i) => ({ id, text: documents[i] ?? "" }));
+  // Score title + body, not body alone: the title (e.g. "Retaliation",
+  // "Netcode Incidents") is already part of what's embedded in stage 1 (see
+  // ingest.ts), and gives the cross-encoder the same signal instead of only
+  // the terse rule body, which can otherwise read as generic out of context.
+  const candidates: RerankCandidate[] = ids.map((id) => {
+    const meta = metadataById.get(id);
+    const body = documentById.get(id) ?? "";
+    return { id, text: meta ? `${meta.title}. ${body}` : body };
+  });
   const reranked = await rerank(incident, candidates);
-  const displayResults: DisplayResult[] = reranked
-    .slice(0, FINAL_K)
-    .map((r) => ({ ...r, metadata: metadataById.get(r.id) ?? null }));
+  const scoreById = new Map(reranked.map((r) => [r.id, r.score]));
+
+  // ids is already Chroma's distance-sorted order (stage 1); reranked is the
+  // cross-encoder's score-sorted order (stage 2). Fusing them means a rule
+  // the cross-encoder confidently — but wrongly — demotes still has to
+  // overcome stage 1's agreement, rather than being dropped solely on stage
+  // 2's say-so.
+  const fusedOrder = fuseRankings([ids, reranked.map((r) => r.id)]);
+  const displayResults: DisplayResult[] = fusedOrder.slice(0, FINAL_K).map((id) => ({
+    id,
+    score: scoreById.get(id) ?? 0,
+    text: documentById.get(id) ?? "",
+    metadata: metadataById.get(id) ?? null,
+  }));
 
   const sectionSuffix = section ? ` (section: ${section})` : "";
   console.log(`Incident: "${incident}"${sectionSuffix}\n`);
