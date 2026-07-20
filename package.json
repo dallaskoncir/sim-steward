@@ -25,7 +25,10 @@
   "homepage": "https://github.com/dallaskoncir/sim-steward#readme",
   "dependencies": {
     "chromadb": "^3.5.0",
-    "ollama": "^0.6.3"
+    "mdast-util-to-string": "^4.0.0",
+    "ollama": "^0.6.3",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
