@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "ingest": "tsx src/ingest.ts",
+    "query": "tsx src/query.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts"
   },
