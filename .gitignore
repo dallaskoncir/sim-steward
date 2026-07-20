@@ -7,3 +7,6 @@ chroma-data/
 .env
 *.log
 .DS_Store
+
+# Local self-correction notes (personal, not shared team memory)
+.claude/memory/
