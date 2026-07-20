@@ -5,6 +5,7 @@ import { parseQueryArgs } from "./parse-args.ts";
 import { rerank } from "./rerank.ts";
 import type { RerankCandidate } from "./rerank-scores.ts";
 import { fuseRankings } from "./fuse-rankings.ts";
+import { generateRuling } from "./generate.ts";
 
 interface RuleMetadata {
   title: string;
@@ -127,7 +128,21 @@ async function main() {
 
   const sectionSuffix = section ? ` (section: ${section})` : "";
   console.log(`Incident: "${incident}"${sectionSuffix}\n`);
-  console.log(formatResults(displayResults));
+
+  if (displayResults.length === 0) {
+    console.log(formatResults(displayResults));
+    return;
+  }
+
+  // Grounded generation: the model only ever sees the retrieved rule text
+  // and is instructed to cite by exact Rule ID, so its explanation can be
+  // checked against — not just trusted alongside — the rules printed below.
+  const ruling = await generateRuling(
+    incident,
+    displayResults.map((r) => ({ id: r.id, title: r.metadata?.title ?? "", text: r.text })),
+  );
+  console.log(`Ruling:\n${ruling}\n`);
+  console.log(`Retrieved Rules:\n${formatResults(displayResults)}`);
 }
 
 main().catch((err) => {

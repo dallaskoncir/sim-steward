@@ -13,16 +13,25 @@ then a local cross-encoder ([transformers.js](https://huggingface.co/docs/transf
 re-scores those candidates against the incident text. The two rankings are
 combined via Reciprocal Rank Fusion rather than trusting the cross-encoder
 alone — see [ADR-003](docs/decisions/0003-rrf-fuse-retrieval-rankings.md)
-for why.
+for why. The top 2 rules are then handed to a local chat model, which
+explains the ruling in plain English and must cite its source by exact
+Rule ID (e.g. `[Rule 1.1]`) — grounded in the retrieved text rather than
+free-form, and checkable against the rules printed alongside it.
 
 ## Quick Start
 
 ### Prerequisites
 - Node.js 20+ (required by the `chromadb` client)
-- [Ollama](https://ollama.com/) running locally, with the embedding model pulled:
+- [Ollama](https://ollama.com/) running locally, with the embedding and
+  chat models pulled:
   ```
   ollama pull nomic-embed-text
+  ollama pull phi4
   ```
+  `phi4` is ~9GB — see [ADR-004](docs/decisions/0004-chat-model-choice.md)
+  for why it's used instead of PROJECT_BRIEF.md's suggested `llama3.2`/
+  `qwen2.5` (swapping is a one-line change in `src/generate.ts` if you'd
+  rather pull one of those instead).
 - [Chroma](https://docs.trychroma.com/) running locally:
   ```
   chroma run --path ./chroma-data
@@ -41,9 +50,10 @@ one, and (re)builds the `rulebook` collection in Chroma from scratch.
 npm run query -- "divebomb into turn 1 that put another car in the wall"
 ```
 Pulls the top 10 candidates from Chroma, re-ranks them with a local
-cross-encoder, fuses that ranking with Chroma's original one, and returns
-the top 2 with the cross-encoder's score shown for reference (it no longer
-solely determines the order — see ADR-003). The first query run downloads
+cross-encoder, fuses that ranking with Chroma's original one, and hands the
+top 2 to a local chat model that explains the ruling and cites its source
+by exact Rule ID — the retrieved rules are printed underneath so the
+citations are checkable, not just trusted. The first query run downloads
 and caches the cross-encoder model (~88MB, under
 `node_modules/@huggingface/transformers/.cache/` — wiped and re-downloaded
 on a fresh `npm install`).
@@ -59,7 +69,7 @@ npm run query -- "brake tested me on the straight" --section 4.0
 | Command | Description |
 |---|---|
 | `npm run ingest` | Parse `data/rulebook.md` into rules and load them into Chroma |
-| `npm run query -- "<incident>" [--section <n.0>]` | Retrieve + cross-encoder-rerank the closest-matching rules, optionally pre-filtered to one rulebook section |
+| `npm run query -- "<incident>" [--section <n.0>]` | Retrieve, rerank, and generate a cited ruling for an incident, optionally pre-filtered to one rulebook section |
 | `npm run typecheck` | Run TypeScript in `--noEmit` mode |
 | `npm test` | Run the test suite |
 
@@ -92,7 +102,7 @@ under WSL2, where Ollama on the Windows host isn't reachable at `127.0.0.1`:
 - `src/query.ts` — embeds a CLI-supplied incident description, optionally
   pre-filters by section metadata, pulls the top 10 nearest rules from
   Chroma, re-ranks them with a cross-encoder, fuses both rankings, and
-  shows the top 2.
+  hands the top 2 to `generate.ts` for a cited ruling.
 - `src/rerank-scores.ts` — pure scoring/sorting logic for the re-rank step
   (unit tested without loading the model).
 - `src/rerank.ts` — loads the local cross-encoder
@@ -103,6 +113,11 @@ under WSL2, where Ollama on the Windows host isn't reachable at `127.0.0.1`:
   rankings via Reciprocal Rank Fusion, so a rule the cross-encoder demotes
   still has to overcome Chroma's agreement to lose the top spot (see
   ADR-003).
+- `src/generate.ts` — builds a prompt from the top 2 retrieved rules and
+  asks a local chat model (`phi4`, see ADR-004) to explain the ruling,
+  citing by exact Rule ID and instructed not to invent rules or details.
+  Prompt construction is pure and unit tested separately from the Ollama
+  call itself.
 - `data/rulebook.md` — sample sporting code used as the source of truth.
 
 This is a scoped, weekend-sized POC (see `PROJECT_BRIEF.md`) meant to prove
