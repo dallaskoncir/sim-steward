@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/dallaskoncir/sim-steward#readme",
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "chromadb": "^3.5.0",
     "mdast-util-to-string": "^4.0.0",
     "ollama": "^0.6.3",
@@ -34,5 +35,8 @@
     "@types/node": "^26.1.1",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "adm-zip": "^0.6.0"
   }
 }
