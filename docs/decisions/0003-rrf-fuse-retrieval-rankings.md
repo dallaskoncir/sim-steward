@@ -111,3 +111,16 @@ computed.
   testing surfaces cases where 60 over- or under-weights one stage, the
   parameter is already exposed (`fuseRankings(rankings, k)`) rather than
   hardcoded.
+- **This is a two-sided tradeoff, not a one-directional fix.** Fusion
+  dampens *any* case where one stage disagrees with the other, including
+  the case ADR-002 added the cross-encoder for in the first place: stage 2
+  correctly overriding a genuinely wrong stage-1 pick. Confirmed with a
+  concrete example: for `"he stabbed the brakes for no reason to mess with
+  me"` (expected `4.1 Brake Testing`), stage 1 alone got it wrong (`1.2`),
+  stage 2 alone got it right (`4.1`), and the fused result reverted to the
+  wrong stage-1 answer (`1.2`) — the exact regression this fusion approach
+  risks. There is no tuning of `k` that eliminates this tradeoff; it can
+  only shift how much weight one stage's opinion needs to override the
+  other's. This PR's fix improves the specific failure mode it targeted
+  (stage 2 wrongly overriding a correct stage 1) at a real, demonstrated
+  cost to the opposite case (stage 2 rightly overriding a wrong stage 1).
