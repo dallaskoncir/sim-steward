@@ -1,5 +1,5 @@
 import { AutoModelForSequenceClassification, AutoTokenizer } from "@huggingface/transformers";
-import { combineScores, type RerankCandidate, type RerankedResult } from "./rerank-scores.ts";
+import { buildPairs, combineScores, type RerankCandidate, type RerankedResult } from "./rerank-scores.ts";
 
 // Source: https://huggingface.co/Xenova/ms-marco-MiniLM-L-6-v2 — ONNX port
 // of cross-encoder/ms-marco-MiniLM-L-6-v2 for use with Transformers.js.
@@ -39,10 +39,8 @@ export async function rerank(query: string, candidates: RerankCandidate[]): Prom
   // Source: https://huggingface.co/Xenova/ms-marco-MiniLM-L-6-v2#usage-transformersjs
   // — pairs the query with each candidate via text/text_pair, one pair per
   // candidate; output is logits of shape [candidates.length, 1].
-  const features = tokenizer(
-    candidates.map(() => query),
-    { text_pair: candidates.map((c) => c.text), padding: true, truncation: true },
-  );
+  const { text, text_pair } = buildPairs(query, candidates);
+  const features = tokenizer(text, { text_pair, padding: true, truncation: true });
   const { logits } = await model(features);
 
   return combineScores(candidates, Array.from(logits.data as Float32Array));
