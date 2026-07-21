@@ -40,3 +40,14 @@ test("rejects a request without a messages array", async () => {
 
   assert.equal(response.status, 400);
 });
+
+test("returns a clean 500 when messages contains a non-UIMessage item", async () => {
+  // Passes the Array.isArray check but isn't UIMessage-shaped, so it throws
+  // inside convertToModelMessages — this exercises the inner try/catch
+  // around streamText/convertToModelMessages, not the outer input validation.
+  const response = await POST(postRequest({ messages: [{ garbage: true }] }));
+
+  assert.equal(response.status, 500);
+  const { error } = await response.json();
+  assert.equal(error, "Failed to generate a response");
+});
