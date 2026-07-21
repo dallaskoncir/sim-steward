@@ -3,13 +3,14 @@
 ## General Development Rules
 - Use TypeScript and Node.js.
 - Ensure strict typing and modern ES modules (`"type": "module"` in package.json).
-- Minimize external dependencies; stick to `chromadb`, `ollama`, and TS boilerplate.
+- Minimize external dependencies on the CLI/RAG side (`src/`); stick to `chromadb`, `ollama`, and TS boilerplate there. The Next.js web app (`app/`) has its own justified stack (`next`, `react`, `ai`/`@ai-sdk/react`, `tailwindcss`, `shadcn`) per PROJECT_BRIEF.md's Phase 5+ — don't add to *that* stack casually either, but it's a separate budget from the CLI's.
 - Leave comments explaining *why* something is done, especially regarding Chroma or vector math, rather than *what* is being done.
 
 ## Project Structure
 - `src/ingest.ts`: Logic for reading `rulebook.md`, chunking text, generating embeddings via Ollama, and saving to Chroma.
 - `src/query.ts`: Logic for taking user input, embedding it, querying Chroma, and formatting the output.
 - `data/rulebook.md`: The sample sim racing penalty guidelines.
+- `app/page.tsx` + `app/api/chat/route.ts`: Next.js chat UI and streaming API route (see README.md's "Web App (Next.js)" section for the full breakdown, including why there are two `tsconfig*.json` files).
 
 ## Branch-per-Step Workflow
 Like Flowlaps, adhere to a strict branch-per-step PR workflow:

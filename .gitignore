@@ -1,6 +1,10 @@
 node_modules/
 dist/
 
+# Next.js build output
+.next/
+*.tsbuildinfo
+
 # Local Chroma server data (chroma run --path ./chroma-data)
 chroma-data/
 
