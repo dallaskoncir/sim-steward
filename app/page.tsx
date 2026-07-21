@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Page() {
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
@@ -42,6 +42,12 @@ export default function Page() {
               ))}
             </div>
           </ScrollArea>
+
+          {error && (
+            <p className="text-destructive text-sm" role="alert">
+              Something went wrong: {error.message}
+            </p>
+          )}
 
           <form
             className="flex gap-2"

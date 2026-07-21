@@ -42,21 +42,40 @@ function toMockStreamChunks(text: string) {
 }
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "Request body must be valid JSON" }, { status: 400 });
+  }
 
-  const result = streamText({
-    model: new MockLanguageModelV4({
-      doStream: async () => ({
-        stream: simulateReadableStream({
-          chunks: toMockStreamChunks(MOCK_RESPONSE),
-          chunkDelayInMs: 30,
+  const messages = (body as { messages?: unknown } | null)?.messages;
+  if (!Array.isArray(messages)) {
+    return Response.json({ error: '"messages" must be an array' }, { status: 400 });
+  }
+
+  try {
+    const result = streamText({
+      model: new MockLanguageModelV4({
+        doStream: async () => ({
+          stream: simulateReadableStream({
+            chunks: toMockStreamChunks(MOCK_RESPONSE),
+            chunkDelayInMs: 30,
+          }),
         }),
       }),
-    }),
-    messages: await convertToModelMessages(messages),
-  });
+      messages: await convertToModelMessages(messages as UIMessage[]),
+    });
 
-  return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
-  });
+    return createUIMessageStreamResponse({
+      stream: toUIMessageStream({ stream: result.stream }),
+    });
+  } catch (error) {
+    // Broad catch is intentional here: convertToModelMessages/streamText can
+    // throw on malformed UIMessage shapes that pass the Array.isArray check
+    // above, and Phase 6 will add a real, metered Ollama/Chroma call behind
+    // this route where an unhandled throw would surface as an opaque 500.
+    console.error("chat route error:", error);
+    return Response.json({ error: "Failed to generate a response" }, { status: 500 });
+  }
 }
